@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prenota un Tavolo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  .prenota-wrap * { box-sizing: border-box; margin: 0; padding: 0; }
+  .prenota-wrap { font-family: 'DM Sans', sans-serif; max-width: 560px; margin: 0 auto; padding: 0 16px; }
+  .prenota-box { background: #fff; border-radius: 24px; padding: 36px 32px; box-shadow: 0 8px 48px rgba(26,18,8,0.12); border: 1px solid #e8ddd0; }
+  .prenota-header { text-align: center; margin-bottom: 28px; }
+  .prenota-header .icon { font-size: 2.4rem; margin-bottom: 8px; }
+  .prenota-header h2 { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; color: #1a1208; margin-bottom: 6px; }
+  .prenota-header p { font-size: 0.88rem; color: #8a7060; line-height: 1.5; }
+  .notice-box { background: #fffbf0; border: 1.5px solid #f0c860; border-radius: 12px; padding: 12px 16px; font-size: 0.84rem; color: #856404; margin-bottom: 22px; line-height: 1.5; display: flex; gap: 10px; align-items: flex-start; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 0.78rem; font-weight: 500; color: #8a7060; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; background: #faf6f0; border: 1.5px solid #e8ddd0; border-radius: 12px; padding: 13px 15px; font-family: 'DM Sans', sans-serif; font-size: 1rem; color: #2d1f0a; transition: border-color 0.2s; -webkit-appearance: none; appearance: none; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #c9963a; box-shadow: 0 0 0 3px rgba(201,150,58,0.1); }
+  .form-group textarea { resize: none; height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .persone-row { display: flex; gap: 10px; }
+  .counter-group { flex: 1; }
+  .counter-group label { display: block; font-size: 0.78rem; font-weight: 500; color: #8a7060; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+  .counter { display: flex; align-items: center; background: #faf6f0; border: 1.5px solid #e8ddd0; border-radius: 12px; overflow: hidden; }
+  .counter button { background: none; border: none; font-size: 1.2rem; padding: 10px 14px; cursor: pointer; color: #c9963a; font-weight: 700; }
+  .counter span { flex: 1; text-align: center; font-size: 1rem; font-weight: 600; color: #2d1f0a; }
+  .slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px; }
+  .slot-btn { padding: 10px 4px; border: 1.5px solid #e8ddd0; border-radius: 10px; background: #faf6f0; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; color: #2d1f0a; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .slot-btn:hover { border-color: #c9963a; background: #fff8ee; }
+  .slot-btn.active { border-color: #c9963a; background: #c9963a; color: #fff; }
+  .slot-btn.pieno { border-color: #e0d0c0; background: #f5f0ea; color: #b09070; cursor: not-allowed; }
+  .slot-sub { font-size: 0.66rem; display: block; margin-top: 2px; }
+  .slot-label-turno { grid-column: 1/-1; font-size: 0.72rem; font-weight: 600; color: #c9963a; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; }
+  .chiusura-box { display: none; background: #fff0e0; border: 1.5px solid #f0b060; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .chiusura-box .cb-titolo { font-weight: 700; color: #904000; font-size: 0.95rem; margin-bottom: 6px; }
+  .chiusura-box .cb-msg { font-size: 0.86rem; color: #904000; line-height: 1.5; }
+  .chiusura-box .cb-tel { font-size: 0.82rem; color: #c9963a; margin-top: 6px; font-weight: 500; }
+  .warn-box { display: none; background: #fff0e0; border: 1.5px solid #f0c090; border-radius: 10px; padding: 12px 14px; font-size: 0.85rem; color: #904000; margin-top: 10px; line-height: 1.5; }
+  .warn-box.show { display: block; }
+  .alt-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .alt-pill { padding: 5px 12px; background: #fff; border: 1.5px solid #c9963a; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #c9963a; cursor: pointer; }
+  .alt-pill:hover { background: #c9963a; color: #fff; }
+  .field-error { font-size: 0.78rem; color: #c0392b; margin-top: 5px; display: none; }
+  .field-error.show { display: block; }
+  .input-err { border-color: #c0392b !important; }
+  .slot-loading { text-align: center; padding: 20px; color: #8a7060; font-size: 0.88rem; }
+  .spin  { display: inline-block; width: 14px; height: 14px; border: 2px solid #e8ddd0; border-top-color: #c9963a; border-radius: 50%; animation: giro 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  .spin2 { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: giro 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes giro { to { transform: rotate(360deg); } }
+  .btn-submit { width: 100%; background: #c9963a; color: #fff; border: none; border-radius: 14px; padding: 16px; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 6px; transition: all 0.2s; }
+  .btn-submit:hover { background: #e8b86d; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(201,150,58,0.35); }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .success-box { display: none; text-align: center; padding: 20px 10px; }
+  .success-box .si { font-size: 3rem; margin-bottom: 14px; }
+  .success-box h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: #1a1208; margin-bottom: 10px; }
+  .success-box p { font-size: 0.9rem; color: #8a7060; line-height: 1.6; margin-bottom: 6px; }
+  .recap { background: #faf6f0; border-radius: 12px; padding: 14px 16px; margin: 16px 0; text-align: left; font-size: 0.88rem; color: #2d1f0a; line-height: 1.8; }
+  .btn-reset { background: none; border: 1.5px solid #e8ddd0; border-radius: 10px; padding: 10px 20px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: #8a7060; cursor: pointer; margin-top: 10px; }
+  @media (max-width: 480px) { .prenota-box { padding: 24px 18px; } .form-row { grid-template-columns: 1fr; } .slot-grid { grid-template-columns: repeat(3, 1fr); } .persone-row { flex-direction: column; } }
+</style>
+</head>
+<body style="background:#f5f0e8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 0;">
+<div class="prenota-wrap">
+  <div class="prenota-box">
+
+    <div class="prenota-header">
+      <div class="icon">🍽</div>
+      <h2>Prenota il tuo tavolo</h2>
+      <p>Compila il form e ti contatteremo per confermare la disponibilità.</p>
+    </div>
+
+    <div class="notice-box">
+      <span style="font-size:1.1rem;flex-shrink:0">⚠️</span>
+      <span>La prenotazione è <strong>valida solo dopo la conferma</strong> da parte nostra tramite chiamata o WhatsApp.</span>
+    </div>
+
+    <div id="formContent">
+
+      <div class="form-group">
+        <label>👥 Composizione del tavolo</label>
+        <div class="persone-row">
+          <div class="counter-group">
+            <label>👤 Adulti</label>
+            <div class="counter">
+              <button type="button" id="btnAdultiMeno">−</button>
+              <span id="valAdulti">2</span>
+              <button type="button" id="btnAdultiPiu">+</button>
+            </div>
+          </div>
+          <div class="counter-group">
+            <label>🧒 Bambini</label>
+            <div class="counter">
+              <button type="button" id="btnBambiniMeno">−</button>
+              <span id="valBambini">0</span>
+              <button type="button" id="btnBambiniPiu">+</button>
+            </div>
+          </div>
+          <div class="counter-group">
+            <label>🪑 Seggioloni</label>
+            <div class="counter">
+              <button type="button" id="btnSeggMeno">−</button>
+              <span id="valSegg">0</span>
+              <button type="button" id="btnSeggPiu">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>📅 Data</label>
+        <input type="date" id="wDate">
+        <div class="field-error" id="errDate">Seleziona una data</div>
+      </div>
+
+      <div class="chiusura-box" id="chiusuraBox">
+        <div class="cb-titolo">🔒 Siamo chiusi in questa data</div>
+        <div class="cb-msg" id="chiusuraMsg"></div>
+        <div class="cb-tel">Per informazioni chiamaci al 📞 328 013 3943</div>
+      </div>
+
+      <div class="form-group" id="slotSection" style="display:none">
+        <label>🕐 Scegli l'orario</label>
+        <div id="slotGrid"></div>
+        <div class="field-error" id="errSlot">Seleziona un orario disponibile</div>
+        <div class="warn-box" id="warnBox">
+          <span id="warnMsg"></span>
+          <div class="alt-pills" id="altPills"></div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>👤 Nome e Cognome</label>
+          <input type="text" id="wName" placeholder="Es. Mario Rossi" autocomplete="name">
+          <div class="field-error" id="errName">Inserisci il tuo nome</div>
+        </div>
+        <div class="form-group">
+          <label>📞 Telefono</label>
+          <input type="tel" id="wPhone" placeholder="Es. 333 1234567" autocomplete="tel">
+          <div class="field-error" id="errPhone">Inserisci il tuo numero</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>📝 Note (facoltativo)</label>
+        <textarea id="wNotes" placeholder="Allergie, occasioni speciali, richieste particolari..."></textarea>
+      </div>
+
+      <button class="btn-submit" id="btnSubmit">
+        Invia richiesta di prenotazione
+      </button>
+
+    </div>
+
+    <div class="success-box" id="successBox">
+      <div class="si">📨</div>
+      <h3>Richiesta inviata!</h3>
+      <p>Abbiamo ricevuto la tua richiesta. Ti contatteremo presto per confermare.</p>
+      <div class="recap" id="successRecap"></div>
+      <p style="font-size:0.82rem;color:#c9963a;font-weight:500">⚠️ Ricorda: la prenotazione è valida solo dopo la nostra conferma.</p>
+      <button class="btn-reset" id="btnReset">Fai un'altra prenotazione</button>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const db = getDatabase(initializeApp({
+  apiKey: "AIzaSyD3qyxx_KTpUW-8Gmo-HZneskMwff4WVyk",
+  authDomain: "prenotazioni-ristorante-27661.firebaseapp.com",
+  databaseURL: "https://prenotazioni-ristorante-27661-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "prenotazioni-ristorante-27661",
+  storageBucket: "prenotazioni-ristorante-27661.firebasestorage.app",
+  messagingSenderId: "849827200863",
+  appId: "1:849827200863:web:76aefb2651e1c6406040ea"
+}));
+
+// ── STATO ─────────────────────────────────────────────────
+let cfgOrari    = { t1start:'19:30', t1end:'21:00', t2active:false, t2start:'21:00', t2end:'23:00', fasce:{} };
+let giorniFissi = new Set();
+let chiusureSpec = {};
+let adulti = 2, bambini = 0, segg = 0;
+let slotScelto = null;
+let occupati   = {};
+
+// ── ELEMENTI DOM ──────────────────────────────────────────
+const elData         = document.getElementById('wDate');
+const elSlotSection  = document.getElementById('slotSection');
+const elSlotGrid     = document.getElementById('slotGrid');
+const elChiusuraBox  = document.getElementById('chiusuraBox');
+const elChiusuraMsg  = document.getElementById('chiusuraMsg');
+const elBtnSubmit    = document.getElementById('btnSubmit');
+const elWarnBox      = document.getElementById('warnBox');
+const elWarnMsg      = document.getElementById('warnMsg');
+const elAltPills     = document.getElementById('altPills');
+
+// Min date = domani
+const dom = new Date(); dom.setDate(dom.getDate()+1);
+elData.min = dom.toISOString().slice(0,10);
+
+// ── FIREBASE ──────────────────────────────────────────────
+onValue(ref(db,'settings'), snap => {
+  cfgOrari = snap.val() || cfgOrari;
+  if (elData.value) aggiornaVista();
+});
+
+onValue(ref(db,'chiusure'), snap => {
+  const d = snap.val() || {};
+  giorniFissi  = new Set(d.giorniFissi || []);
+  chiusureSpec = d.specifiche || {};
+  if (elData.value) aggiornaVista();
+});
+
+// ── CHIUSURA ──────────────────────────────────────────────
+function msgChiusura(data) {
+  if (!data) return null;
+  const dow = new Date(data + 'T12:00:00').getDay();
+  if (giorniFissi.has(dow)) return 'Siamo chiusi in questo giorno della settimana.';
+  const k = data.replace(/-/g,'');
+  if (chiusureSpec[k]) return chiusureSpec[k].motivo || 'Siamo chiusi in questa data.';
+  return null;
+}
+
+// ── AGGIORNA VISTA ────────────────────────────────────────
+async function aggiornaVista() {
+  const data = elData.value;
+  if (!data) return;
+
+  const chiuso = msgChiusura(data);
+
+  if (chiuso) {
+    elChiusuraBox.style.display  = 'block';
+    elChiusuraMsg.textContent    = chiuso;
+    elSlotSection.style.display  = 'none';
+    elBtnSubmit.disabled         = true;
+    return;
+  }
+
+  elChiusuraBox.style.display = 'none';
+  elSlotSection.style.display = '';
+  elBtnSubmit.disabled        = false;
+  elSlotGrid.innerHTML = '<div class="slot-loading"><span class="spin"></span>Caricamento disponibilità...</div>';
+
+  const [sB, sP] = await Promise.all([
+    get(ref(db, `bookings/${data}`)),
+    get(ref(db, 'pending'))
+  ]);
+
+  occupati = {};
+  Object.values(sB.val() || {}).forEach(b => {
+    const k = b.time.replace(':','_');
+    occupati[k] = (occupati[k]||0) + (parseInt(b.pax)||0) + (parseInt(b.bambini)||0);
+  });
+  Object.values(sP.val() || {}).filter(b => b.date === data).forEach(b => {
+    const k = b.time.replace(':','_');
+    occupati[k] = (occupati[k]||0) + (parseInt(b.pax)||0) + (parseInt(b.bambini)||0);
+  });
+
+  disegnaSlot();
+}
+
+// ── DISEGNA SLOT ──────────────────────────────────────────
+function disegnaSlot() {
+  const slots  = getSlots();
+  const fasce  = cfgOrari.fasce || {};
+  const needed = adulti + bambini;
+
+  if (!slots.length) {
+    elSlotGrid.innerHTML = '<p style="text-align:center;padding:20px;color:#8a7060;font-size:0.88rem">Nessun orario disponibile. Contattaci direttamente.</p>';
+    return;
+  }
+
+  let turnoPrec = 0;
+  elSlotGrid.className = 'slot-grid';
+  elSlotGrid.innerHTML = slots.map(({ time, turno }) => {
+    const k     = time.replace(':','_');
+    const max   = fasce[k] !== undefined ? parseInt(fasce[k]) : 20;
+    const lib   = max - (occupati[k] || 0);
+    const pieno = lib < needed;
+
+    let label = '';
+    if (turno !== turnoPrec) {
+      turnoPrec = turno;
+      label = `<div class="slot-label-turno">Turno ${turno}</div>`;
+    }
+
+    if (pieno) {
+      const sub = lib <= 0 ? 'Completo' : `Max ${lib} pers.`;
+      return `${label}<button class="slot-btn pieno" disabled data-time="${time}">${time}<span class="slot-sub">${sub}</span></button>`;
+    }
+    const att = slotScelto === time ? ' active' : '';
+    return `${label}<button class="slot-btn${att}" data-time="${time}">${time}</button>`;
+  }).join('');
+
+  // Attach click listeners agli slot disponibili
+  elSlotGrid.querySelectorAll('.slot-btn:not(.pieno)').forEach(btn => {
+    btn.addEventListener('click', () => scegliSlot(btn.dataset.time, btn));
+  });
+}
+
+function getSlots() {
+  const c = cfgOrari, slots = [];
+  function add(s, e, t) {
+    if (!s || !e) return;
+    const [sh, sm] = s.split(':').map(Number);
+    const [eh, em] = e.split(':').map(Number);
+    let m = sh * 60 + sm;
+    while (m < eh * 60 + em) {
+      slots.push({ time: `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`, turno: t });
+      m += 15;
+    }
+  }
+  add(c.t1start, c.t1end, 1);
+  if (c.t2active) add(c.t2start, c.t2end, 2);
+  return slots;
+}
+
+// ── SCEGLI SLOT ───────────────────────────────────────────
+function scegliSlot(time, el) {
+  elSlotGrid.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  slotScelto = time;
+  document.getElementById('errSlot').classList.remove('show');
+  elWarnBox.classList.remove('show');
+}
+
+function scegliAlt(time) {
+  const btn = elSlotGrid.querySelector(`[data-time="${time}"]`);
+  if (btn) scegliSlot(time, btn);
+  elWarnBox.classList.remove('show');
+}
+
+// ── CONTATORI ─────────────────────────────────────────────
+function cambiaNum(campo, delta) {
+  if (campo === 'adulti')  { adulti  = Math.max(1,  Math.min(20, adulti  + delta)); document.getElementById('valAdulti').textContent  = adulti; }
+  if (campo === 'bambini') { bambini = Math.max(0,  Math.min(10, bambini + delta)); document.getElementById('valBambini').textContent = bambini; }
+  if (campo === 'segg')    { segg    = Math.max(0,  Math.min(Math.max(bambini, 1), segg + delta)); document.getElementById('valSegg').textContent = segg; }
+  if (elData.value) aggiornaVista();
+}
+
+// ── INVIO ─────────────────────────────────────────────────
+async function invia() {
+  const data = elData.value;
+  const nome = document.getElementById('wName').value.trim();
+  const tel  = document.getElementById('wPhone').value.trim();
+  const note = document.getElementById('wNotes').value.trim();
+
+  // Validazione
+  let ok = true;
+  ['errDate','errSlot','errName','errPhone'].forEach(id => document.getElementById(id).classList.remove('show'));
+  ['wName','wPhone'].forEach(id => document.getElementById(id).classList.remove('input-err'));
+  if (!data)       { document.getElementById('errDate').classList.add('show'); ok = false; }
+  if (!slotScelto) { document.getElementById('errSlot').classList.add('show'); ok = false; }
+  if (!nome)       { document.getElementById('errName').classList.add('show'); document.getElementById('wName').classList.add('input-err'); ok = false; }
+  if (!tel)        { document.getElementById('errPhone').classList.add('show'); document.getElementById('wPhone').classList.add('input-err'); ok = false; }
+  if (!ok) return;
+
+  // Blocca se chiuso
+  if (msgChiusura(data)) { elBtnSubmit.disabled = true; return; }
+
+  const needed = adulti + bambini;
+
+  // Anti-overbooking: rileggi dati freschi
+  const [sB, sP] = await Promise.all([
+    get(ref(db, `bookings/${data}`)),
+    get(ref(db, 'pending'))
+  ]);
+  const fresh = {};
+  Object.values(sB.val() || {}).forEach(b => { const k = b.time.replace(':','_'); fresh[k] = (fresh[k]||0) + (parseInt(b.pax)||0) + (parseInt(b.bambini)||0); });
+  Object.values(sP.val() || {}).filter(b => b.date === data).forEach(b => { const k = b.time.replace(':','_'); fresh[k] = (fresh[k]||0) + (parseInt(b.pax)||0) + (parseInt(b.bambini)||0); });
+
+  const k      = slotScelto.replace(':','_');
+  const fasce  = cfgOrari.fasce || {};
+  const max    = fasce[k] !== undefined ? parseInt(fasce[k]) : 20;
+  const liberi = max - (fresh[k] || 0);
+
+  if (liberi < needed) {
+    const alt = getSlots().filter(s => {
+      const sk = s.time.replace(':','_');
+      const sm = fasce[sk] !== undefined ? parseInt(fasce[sk]) : 20;
+      return (sm - (fresh[sk]||0)) >= needed && s.time !== slotScelto;
+    }).slice(0,4).map(s => s.time);
+
+    const msg = liberi <= 0
+      ? `L'orario ${slotScelto} si è appena esaurito!`
+      : `Per le ${slotScelto} restano solo ${liberi} posti, non sufficienti per ${needed} persone.`;
+
+    elWarnMsg.textContent  = '⚠️ ' + msg + (alt.length ? ' Orari alternativi:' : ' Contattaci per trovare una soluzione.');
+    elAltPills.innerHTML   = alt.map(t => `<button class="alt-pill" data-alt="${t}">${t}</button>`).join('');
+    elAltPills.querySelectorAll('.alt-pill').forEach(btn => {
+      btn.addEventListener('click', () => scegliAlt(btn.dataset.alt));
+    });
+    elWarnBox.classList.add('show');
+    occupati = fresh; disegnaSlot(); slotScelto = null;
+    return;
+  }
+
+  // Salva su Firebase
+  elBtnSubmit.disabled = true;
+  elBtnSubmit.innerHTML = '<span class="spin2"></span>Invio in corso...';
+  try {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    await set(ref(db, `pending/${id}`), {
+      id, name: nome, phone: tel, date: data,
+      time: slotScelto, pax: adulti, bambini, seggioloni: segg,
+      notes: note, source: 'online', requestedAt: Date.now()
+    });
+
+    const [,m,g] = data.split('-');
+    document.getElementById('successRecap').innerHTML =
+      `📅 <strong>${parseInt(g)}/${parseInt(m)}</strong> alle <strong>${slotScelto}</strong><br>` +
+      `👥 ${adulti} adult${adulti===1?'o':'i'}${bambini>0?`, ${bambini} bambin${bambini===1?'o':'i'}`:''}<br>` +
+      `👤 ${nome} · 📞 ${tel}` + (note ? `<br>📝 ${note}` : '');
+
+    document.getElementById('formContent').style.display = 'none';
+    document.getElementById('successBox').style.display  = 'block';
+  } catch(e) {
+    elBtnSubmit.disabled = false;
+    elBtnSubmit.innerHTML = 'Invia richiesta di prenotazione';
+    alert('Errore di connessione. Riprova o chiamaci al 328 013 3943.');
+  }
+}
+
+// ── RESET ─────────────────────────────────────────────────
+function azzeraForm() {
+  ['wDate','wName','wPhone','wNotes'].forEach(id => document.getElementById(id).value = '');
+  elSlotSection.style.display  = 'none';
+  elChiusuraBox.style.display  = 'none';
+  elWarnBox.classList.remove('show');
+  adulti=2; bambini=0; segg=0;
+  document.getElementById('valAdulti').textContent  = '2';
+  document.getElementById('valBambini').textContent = '0';
+  document.getElementById('valSegg').textContent    = '0';
+  slotScelto = null; occupati = {};
+  document.getElementById('formContent').style.display = '';
+  document.getElementById('successBox').style.display  = 'none';
+  elBtnSubmit.disabled  = false;
+  elBtnSubmit.innerHTML = 'Invia richiesta di prenotazione';
+}
+
+// ── EVENT LISTENERS ───────────────────────────────────────
+elData.addEventListener('change', () => {
+  slotScelto = null;
+  elWarnBox.classList.remove('show');
+  aggiornaVista();
+});
+
+document.getElementById('btnAdultiMeno').addEventListener('click', () => cambiaNum('adulti', -1));
+document.getElementById('btnAdultiPiu').addEventListener('click',  () => cambiaNum('adulti',  1));
+document.getElementById('btnBambiniMeno').addEventListener('click', () => cambiaNum('bambini', -1));
+document.getElementById('btnBambiniPiu').addEventListener('click',  () => cambiaNum('bambini',  1));
+document.getElementById('btnSeggMeno').addEventListener('click', () => cambiaNum('segg', -1));
+document.getElementById('btnSeggPiu').addEventListener('click',  () => cambiaNum('segg',  1));
+document.getElementById('btnSubmit').addEventListener('click', invia);
+document.getElementById('btnReset').addEventListener('click', azzeraForm);
+</script>
+</body>
+</html>
