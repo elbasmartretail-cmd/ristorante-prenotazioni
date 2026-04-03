@@ -460,108 +460,149 @@ document.write('<link rel="manifest" href="'+URL.createObjectURL(blob)+'">');
   let giorniFissi = new Set();
   let chiusureSpecifiche = {};
 
-  // ── SENTINELLA ────────────────────────────────────────────
-  let sentinellaAttiva = false;
-  let allarmeInterval = null;
-  const startupTime = Date.now();
+// ── SENTINELLA ────────────────────────────────────────────
+let sentinellaAttiva = false;
+let allarmeInterval = null;
+const startupTime = Date.now();
 
-  function setSentinellaUI(attiva) {
-    const btn = document.getElementById('btnSentinella');
-    const status = document.getElementById('sentinellaStatus');
-    if (attiva) {
-      btn.textContent = '🔔 MONITORAGGIO ATTIVO';
-      btn.classList.add('attiva');
-      status.textContent = '✅ Allarme attivo — riceverai una notifica sonora per ogni nuova richiesta.';
-    } else {
-      btn.textContent = '🔔 ATTIVA MONITORAGGIO';
-      btn.classList.remove('attiva');
-      status.textContent = 'Premi il tasto per ricevere gli allarmi audio delle nuove prenotazioni.';
-    }
-  }
-
-  document.getElementById('btnSentinella').addEventListener('click', () => {
-    if (sentinellaAttiva) {
-      sentinellaAttiva = false;
-      localStorage.setItem('sentinellaAttiva', '0');
-      setSentinellaUI(false);
-      alarmAudio = null;
-    } else {
-      // Crea e sblocca l'audio al click (necessario per Safari iPhone)
-      creaAudio();
-      suonaCampana();
-      sentinellaAttiva = true;
-      localStorage.setItem('sentinellaAttiva', '1');
-      setSentinellaUI(true);
-    }
-  });
-
-  // Ripristina stato sentinella al caricamento
-  // Nota: l'AudioContext va ricreato al click perché il browser lo blocca senza interazione utente.
-  // Mostriamo lo stato visivo ma aspettiamo il primo click per sbloccare l'audio.
-  if (localStorage.getItem('sentinellaAttiva') === '1') {
-    sentinellaAttiva = true;
-    setSentinellaUI(true);
-    // Mostra un avviso che richiede di toccare per riattivare l'audio
-    document.getElementById('sentinellaStatus').textContent = '⚠️ Tocca il tasto per riattivare l'audio (richiesto dal browser).';
-    document.getElementById('btnSentinella').classList.add('attiva');
-    // Al primo tocco qualsiasi sulla pagina, ricrea l'AudioContext
-    const riattiva = () => {
-      if (sentinellaAttiva) {
-        creaAudio();
-        suonaCampana();
-        document.getElementById('sentinellaStatus').textContent = '✅ Allarme attivo — riceverai una notifica sonora per ogni nuova richiesta.';
-      }
-    };
-    document.addEventListener('touchstart', riattiva, {once:true});
-    document.addEventListener('click', riattiva, {once:true});
-  }
-
-  /// Audio — compatibile Safari iPhone e Android
-let audioCtx = null;  // ← AGGIUNTO
+// Audio — compatibile Safari iPhone e Android
+let audioCtx = null;
 let alarmAudio = null;
 
-function creaAudio() {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  // ... resto del codice
+function setSentinellaUI(attiva) {
+  const btn = document.getElementById('btnSentinella');
+  const status = document.getElementById('sentinellaStatus');
+  if (attiva) {
+    btn.textContent = '🔔 MONITORAGGIO ATTIVO';
+    btn.classList.add('attiva');
+    status.textContent = '✅ Allarme attivo — riceverai una notifica sonora per ogni nuova richiesta.';
+  } else {
+    btn.textContent = '🔔 ATTIVA MONITORAGGIO';
+    btn.classList.remove('attiva');
+    status.textContent = 'Premi il tasto per ricevere gli allarmi audio delle nuove prenotazioni.';
+  }
 }
 
-  function suonaCampana() {
-    try {
-      if (!alarmAudio) creaAudio();
-      // Clona il nodo per permettere sovrapposizione rapida
-      const s = alarmAudio.cloneNode();
-      s.volume = 1.0;
-      s.play().catch(() => {
-        // Se fallisce, riprova ricreando l'audio
-        creaAudio();
-        alarmAudio.play().catch(()=>{});
-      });
-    } catch(e) {}
-  }
-
-  function avviaAllarme(b) {
-    if (!sentinellaAttiva || !audioCtx) return;
-    // Popup a tutto schermo
-    const [,m,g] = (b.date||'').split('-');
-    document.getElementById('allarmeInfo').innerHTML =
-      `👤 <strong>${b.name||'–'}</strong><br>` +
-      `📅 ${parseInt(g)||'?'}/${parseInt(m)||'?'} alle <strong>${b.time||'–'}</strong><br>` +
-      `👥 ${b.pax||0} adult${(b.pax||0)==1?'o':'i'}${parseInt(b.bambini)>0?` + ${b.bambini} bambin${b.bambini==1?'o':'i'}`:''}<br>` +
-      `📞 ${b.phone||'–'}` +
-      (b.notes ? `<br>📝 ${b.notes}` : '');
-    document.getElementById('allarmeOverlay').classList.add('show');
-    // Suono continuo ogni 2 secondi
-    allarmeInterval = setInterval(() => {
-      if (audioCtx) suonaCampana();
-    }, 2000);
+document.getElementById('btnSentinella').addEventListener('click', () => {
+  if (sentinellaAttiva) {
+    sentinellaAttiva = false;
+    localStorage.setItem('sentinellaAttiva', '0');
+    setSentinellaUI(false);
+    alarmAudio = null;
+  } else {
+    // Crea e sblocca l'audio al click (necessario per Safari iPhone)
+    creaAudio();
     suonaCampana();
+    sentinellaAttiva = true;
+    localStorage.setItem('sentinellaAttiva', '1');
+    setSentinellaUI(true);
+  }
+});
+
+// Ripristina stato sentinella al caricamento
+if (localStorage.getItem('sentinellaAttiva') === '1') {
+  sentinellaAttiva = true;
+  setSentinellaUI(true);
+  document.getElementById('sentinellaStatus').textContent = '⚠️ Tocca il tasto per riattivare l'audio (richiesto dal browser).';
+  document.getElementById('btnSentinella').classList.add('attiva');
+  
+  const riattiva = () => {
+    if (sentinellaAttiva) {
+      creaAudio();
+      suonaCampana();
+      document.getElementById('sentinellaStatus').textContent = '✅ Allarme attivo — riceverai una notifica sonora per ogni nuova richiesta.';
+    }
+  };
+  document.addEventListener('touchstart', riattiva, {once: true});
+  document.addEventListener('click', riattiva, {once: true});
+}
+
+function creaAudio() {
+  if (audioCtx) return; // Evita ricreazione se già esiste
+  
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(e => console.log('AudioContext resume fallito:', e));
+      }
+    }
+  } catch (e) {
+    console.log('AudioContext non disponibile:', e);
+    audioCtx = null;
   }
 
-  document.getElementById('btnVediPrenotazione').addEventListener('click', () => {
-    document.getElementById('allarmeOverlay').classList.remove('show');
-    if (allarmeInterval) { clearInterval(allarmeInterval); allarmeInterval = null; }
-    switchTab('attesa');
-  });
+  const urls = [
+    'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
+    'https://www.soundjay.com/buttons/sounds/beep-01a.mp3'
+  ];
+  
+  alarmAudio = new Audio(urls[0]);
+  alarmAudio.volume = 1.0;
+  alarmAudio.preload = 'auto';
+  
+  alarmAudio.onerror = () => {
+    console.log('Prima URL fallita, provo la seconda...');
+    alarmAudio = new Audio(urls[1]);
+    alarmAudio.volume = 1.0;
+  };
+}
+
+function suonaCampana() {
+  try {
+    if (!alarmAudio) creaAudio();
+    if (!alarmAudio) return;
+    
+    // Clona il nodo per permettere sovrapposizione rapida
+    const s = alarmAudio.cloneNode();
+    s.volume = 1.0;
+    
+    s.play().catch((err) => {
+      console.log('Play fallito:', err);
+      creaAudio();
+      if (alarmAudio) {
+        alarmAudio.play().catch((e) => console.log('Retry fallito:', e));
+      }
+    });
+  } catch (e) {
+    console.log('Errore suonaCampana:', e);
+  }
+}
+
+function avviaAllarme(b) {
+  if (!sentinellaAttiva || !audioCtx) return;
+  
+  // Popup a tutto schermo
+  const [, m, g] = (b.date || '').split('-');
+  const bambinoText = parseInt(b.bambini) > 0 ? ` + ${b.bambini} bambin${b.bambini == 1 ? 'o' : 'i'}` : '';
+  
+  document.getElementById('allarmeInfo').innerHTML =
+    `👤 <strong>${b.name || '–'}</strong><br>` +
+    `📅 ${parseInt(g) || '?'}/${parseInt(m) || '?'} alle <strong>${b.time || '–'}</strong><br>` +
+    `👥 ${b.pax || 0} adult${(b.pax || 0) == 1 ? 'o' : 'i'}${bambinoText}<br>` +
+    `📞 ${b.phone || '–'}` +
+    (b.notes ? `<br>📝 ${b.notes}` : '');
+  
+  document.getElementById('allarmeOverlay').classList.add('show');
+  
+  // Suono continuo ogni 2 secondi
+  if (allarmeInterval) clearInterval(allarmeInterval);
+  allarmeInterval = setInterval(() => {
+    if (sentinellaAttiva && audioCtx) suonaCampana();
+  }, 2000);
+  
+  suonaCampana(); // Primo allarme subito
+}
+
+document.getElementById('btnVediPrenotazione').addEventListener('click', () => {
+  document.getElementById('allarmeOverlay').classList.remove('show');
+  if (allarmeInterval) {
+    clearInterval(allarmeInterval);
+    allarmeInterval = null;
+  }
+  switchTab('attesa');
+});
 
   // ── FIREBASE LISTENERS ────────────────────────────────────
   onValue(ref(db,'bookings'), snap => {
