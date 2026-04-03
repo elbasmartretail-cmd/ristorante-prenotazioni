@@ -184,6 +184,14 @@ document.write('<link rel="manifest" href="'+URL.createObjectURL(blob)+'">');
 </head>
 <body>
 
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./firebase-messaging-sw.js')
+      .then(reg => console.log('Service Worker Registrato', reg))
+      .catch(err => console.log('Errore SW', err));
+  }
+</script>
+
 <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><span>Caricamento...</span></div>
 
 <div class="sentinella-bar">
@@ -408,8 +416,10 @@ document.write('<link rel="manifest" href="'+URL.createObjectURL(blob)+'">');
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, set, get, onValue, onChildAdded, remove }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getMessaging, getToken, onMessage } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
-  const db = getDatabase(initializeApp({
+  const firebaseConfig = {
     apiKey: "AIzaSyD3qyxx_KTpUW-8Gmo-HZneskMwff4WVyk",
     authDomain: "prenotazioni-ristorante-27661.firebaseapp.com",
     databaseURL: "https://prenotazioni-ristorante-27661-default-rtdb.europe-west1.firebasedatabase.app",
@@ -417,7 +427,11 @@ document.write('<link rel="manifest" href="'+URL.createObjectURL(blob)+'">');
     storageBucket: "prenotazioni-ristorante-27661.firebasestorage.app",
     messagingSenderId: "849827200863",
     appId: "1:849827200863:web:76aefb2651e1c6406040ea"
-  }));
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const messaging = getMessaging(app);
 
   let currentDate = todayStr();
   let allBookings = {}, pendingBookings = {}, settings = {};
@@ -428,6 +442,49 @@ document.write('<link rel="manifest" href="'+URL.createObjectURL(blob)+'">');
   let sentinellaAttiva = false;
   let allarmeInterval = null;
   const startupTime = Date.now();
+
+  // --- LOGICA TOKEN FCM ---
+  async function requestPermission() {
+    console.log('Richiesta permessi notifica...');
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        console.log('Permesso accordato.');
+        const token = await getToken(messaging, { 
+          vapidKey: 'BCUGtEuFZIQ93pEkErIgFpLII2j4BvcXOGiuRtGWoT4Jv7FjY0XVUF2ukQz-zxECVU_ZRulbZSQrlA8RMKrt5wI' 
+        });
+        if (token) {
+          console.log('Token generato:', token);
+          // Salvataggio nel DB
+          const tokenClean = token.replace(/[.#$[\]]/g, '_');
+          await set(ref(db, 'tokens/' + tokenClean), {
+            token: token,
+            updatedAt: Date.now(),
+            device: navigator.userAgent
+          });
+        } else {
+          console.log('Nessun Token disponibile. Controlla le impostazioni.');
+        }
+      } else {
+        console.log('Permesso negato.');
+      }
+    } catch (err) {
+      console.log('Errore durante la richiesta permessi:', err);
+    }
+  }
+
+  // Gestione messaggi quando l'app è aperta
+  onMessage(messaging, (payload) => {
+    console.log('Messaggio ricevuto in foreground: ', payload);
+    if (payload.data) {
+      suonaCampana();
+      avviaAllarme(payload.data);
+    }
+  });
+
+  requestPermission();
+
+  // --- FUNZIONI ORIGINALI ---
 
   function setSentinellaUI(attiva) {
     const btn = document.getElementById('btnSentinella');
