@@ -460,149 +460,117 @@ document.write('<link rel="manifest" href="'+URL.createObjectURL(blob)+'">');
   let giorniFissi = new Set();
   let chiusureSpecifiche = {};
 
-// ── SENTINELLA ────────────────────────────────────────────
-let sentinellaAttiva = false;
-let allarmeInterval = null;
-const startupTime = Date.now();
+  // ── SENTINELLA ────────────────────────────────────────────
+  let sentinellaAttiva = false;
+  let allarmeInterval = null;
+  let alarmAudio = null;
+  const startupTime = Date.now();
 
-// Audio — compatibile Safari iPhone e Android
-let audioCtx = null;
-let alarmAudio = null;
-
-function setSentinellaUI(attiva) {
-  const btn = document.getElementById('btnSentinella');
-  const status = document.getElementById('sentinellaStatus');
-  if (attiva) {
-    btn.textContent = '🔔 MONITORAGGIO ATTIVO';
-    btn.classList.add('attiva');
-    status.textContent = '✅ Allarme attivo — riceverai una notifica sonora per ogni nuova richiesta.';
-  } else {
-    btn.textContent = '🔔 ATTIVA MONITORAGGIO';
-    btn.classList.remove('attiva');
-    status.textContent = 'Premi il tasto per ricevere gli allarmi audio delle nuove prenotazioni.';
+  function setSentinellaUI(attiva) {
+    const btn = document.getElementById('btnSentinella');
+    const status = document.getElementById('sentinellaStatus');
+    if (attiva) {
+      btn.textContent = '🔔 MONITORAGGIO ATTIVO';
+      btn.classList.add('attiva');
+      status.textContent = '✅ Allarme attivo — riceverai una notifica sonora per ogni nuova richiesta.';
+    } else {
+      btn.textContent = '🔔 ATTIVA MONITORAGGIO';
+      btn.classList.remove('attiva');
+      status.textContent = 'Premi il tasto per ricevere gli allarmi audio delle nuove prenotazioni.';
+    }
   }
-}
 
-document.getElementById('btnSentinella').addEventListener('click', () => {
-  if (sentinellaAttiva) {
-    sentinellaAttiva = false;
-    localStorage.setItem('sentinellaAttiva', '0');
-    setSentinellaUI(false);
-    alarmAudio = null;
-  } else {
-    // Crea e sblocca l'audio al click (necessario per Safari iPhone)
-    creaAudio();
-    suonaCampana();
-    sentinellaAttiva = true;
-    localStorage.setItem('sentinellaAttiva', '1');
-    setSentinellaUI(true);
-  }
-});
-
-// Ripristina stato sentinella al caricamento
-if (localStorage.getItem('sentinellaAttiva') === '1') {
-  sentinellaAttiva = true;
-  setSentinellaUI(true);
-  document.getElementById('sentinellaStatus').textContent = '⚠️ Tocca il tasto per riattivare l'audio (richiesto dal browser).';
-  document.getElementById('btnSentinella').classList.add('attiva');
-  
-  const riattiva = () => {
+  document.getElementById('btnSentinella').addEventListener('click', () => {
     if (sentinellaAttiva) {
+      sentinellaAttiva = false;
+      localStorage.setItem('sentinellaAttiva', '0');
+      setSentinellaUI(false);
+      alarmAudio = null;
+    } else {
       creaAudio();
       suonaCampana();
-      document.getElementById('sentinellaStatus').textContent = '✅ Allarme attivo — riceverai una notifica sonora per ogni nuova richiesta.';
+      sentinellaAttiva = true;
+      localStorage.setItem('sentinellaAttiva', '1');
+      setSentinellaUI(true);
     }
-  };
-  document.addEventListener('touchstart', riattiva, {once: true});
-  document.addEventListener('click', riattiva, {once: true});
-}
+  });
 
-function creaAudio() {
-  if (audioCtx) return; // Evita ricreazione se già esiste
-  
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (AudioContext) {
-      audioCtx = new AudioContext();
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(e => console.log('AudioContext resume fallito:', e));
+  if (localStorage.getItem('sentinellaAttiva') === '1') {
+    sentinellaAttiva = true;
+    setSentinellaUI(true);
+    document.getElementById('sentinellaStatus').textContent = '⚠️ Tocca il tasto per riattivare l\'audio (richiesto dal browser).';
+    document.getElementById('btnSentinella').classList.add('attiva');
+    const riattiva = () => {
+      if (sentinellaAttiva) {
+        creaAudio();
+        suonaCampana();
+        document.getElementById('sentinellaStatus').textContent = '✅ Allarme attivo — riceverai una notifica sonora per ogni nuova richiesta.';
       }
-    }
-  } catch (e) {
-    console.log('AudioContext non disponibile:', e);
-    audioCtx = null;
+    };
+    document.addEventListener('touchstart', riattiva, {once:true});
+    document.addEventListener('click', riattiva, {once:true});
   }
 
-  const urls = [
-    'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
-    'https://www.soundjay.com/buttons/sounds/beep-01a.mp3'
-  ];
-  
-  alarmAudio = new Audio(urls[0]);
-  alarmAudio.volume = 1.0;
-  alarmAudio.preload = 'auto';
-  
-  alarmAudio.onerror = () => {
-    console.log('Prima URL fallita, provo la seconda...');
-    alarmAudio = new Audio(urls[1]);
+  function creaAudio() {
+    if (alarmAudio) return;
+    const urls = [
+      'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
+      'https://www.soundjay.com/buttons/sounds/beep-01a.mp3'
+    ];
+    alarmAudio = new Audio(urls[0]);
     alarmAudio.volume = 1.0;
-  };
-}
-
-function suonaCampana() {
-  try {
-    if (!alarmAudio) creaAudio();
-    if (!alarmAudio) return;
-    
-    // Clona il nodo per permettere sovrapposizione rapida
-    const s = alarmAudio.cloneNode();
-    s.volume = 1.0;
-    
-    s.play().catch((err) => {
-      console.log('Play fallito:', err);
-      creaAudio();
-      if (alarmAudio) {
-        alarmAudio.play().catch((e) => console.log('Retry fallito:', e));
-      }
-    });
-  } catch (e) {
-    console.log('Errore suonaCampana:', e);
+    alarmAudio.preload = 'auto';
+    alarmAudio.onerror = () => {
+      console.log('Prima URL fallita, provo la seconda...');
+      alarmAudio = new Audio(urls[1]);
+      alarmAudio.volume = 1.0;
+    };
   }
-}
 
-function avviaAllarme(b) {
-  if (!sentinellaAttiva || !audioCtx) return;
-  
-  // Popup a tutto schermo
-  const [, m, g] = (b.date || '').split('-');
-  const bambinoText = parseInt(b.bambini) > 0 ? ` + ${b.bambini} bambin${b.bambini == 1 ? 'o' : 'i'}` : '';
-  
-  document.getElementById('allarmeInfo').innerHTML =
-    `👤 <strong>${b.name || '–'}</strong><br>` +
-    `📅 ${parseInt(g) || '?'}/${parseInt(m) || '?'} alle <strong>${b.time || '–'}</strong><br>` +
-    `👥 ${b.pax || 0} adult${(b.pax || 0) == 1 ? 'o' : 'i'}${bambinoText}<br>` +
-    `📞 ${b.phone || '–'}` +
-    (b.notes ? `<br>📝 ${b.notes}` : '');
-  
-  document.getElementById('allarmeOverlay').classList.add('show');
-  
-  // Suono continuo ogni 2 secondi
-  if (allarmeInterval) clearInterval(allarmeInterval);
-  allarmeInterval = setInterval(() => {
-    if (sentinellaAttiva && audioCtx) suonaCampana();
-  }, 2000);
-  
-  suonaCampana(); // Primo allarme subito
-}
-
-document.getElementById('btnVediPrenotazione').addEventListener('click', () => {
-  document.getElementById('allarmeOverlay').classList.remove('show');
-  if (allarmeInterval) {
-    clearInterval(allarmeInterval);
-    allarmeInterval = null;
+  function suonaCampana() {
+    try {
+      if (!alarmAudio) creaAudio();
+      if (!alarmAudio) return;
+      const s = alarmAudio.cloneNode();
+      s.volume = 1.0;
+      s.play().catch((err) => {
+        console.log('Play fallito:', err);
+        creaAudio();
+        if (alarmAudio) {
+          alarmAudio.play().catch((e) => console.log('Retry fallito:', e));
+        }
+      });
+    } catch(e) {
+      console.log('Errore suonaCampana:', e);
+    }
   }
-  switchTab('attesa');
-});
+
+  function avviaAllarme(b) {
+    if (!sentinellaAttiva) return;
+    const [,m,g] = (b.date||'').split('-');
+    const bambinoText = parseInt(b.bambini) > 0 ? ` + ${b.bambini} bambin${b.bambini == 1 ? 'o' : 'i'}` : '';
+    document.getElementById('allarmeInfo').innerHTML =
+      `👤 <strong>${b.name||'–'}</strong><br>` +
+      `📅 ${parseInt(g)||'?'}/${parseInt(m)||'?'} alle <strong>${b.time||'–'}</strong><br>` +
+      `👥 ${b.pax||0} adult${(b.pax||0)==1?'o':'i'}${bambinoText}<br>` +
+      `📞 ${b.phone||'–'}` +
+      (b.notes ? `<br>📝 ${b.notes}` : '');
+    document.getElementById('allarmeOverlay').classList.add('show');
+    if (allarmeInterval) clearInterval(allarmeInterval);
+    allarmeInterval = setInterval(() => {
+      if (sentinellaAttiva) suonaCampana();
+    }, 2000);
+    suonaCampana();
+  }
+
+  document.getElementById('btnVediPrenotazione').addEventListener('click', () => {
+    document.getElementById('allarmeOverlay').classList.remove('show');
+    if (allarmeInterval) {
+      clearInterval(allarmeInterval);
+      allarmeInterval = null;
+    }
+    switchTab('attesa');
+  });
 
   // ── FIREBASE LISTENERS ────────────────────────────────────
   onValue(ref(db,'bookings'), snap => {
@@ -618,14 +586,12 @@ document.getElementById('btnVediPrenotazione').addEventListener('click', () => {
     updateBadge();
   });
 
-  // Listener SENTINELLA — scatta solo per nuove richieste
   onChildAdded(ref(db,'pending'), snap => {
     const b = snap.val();
     if (!b) return;
-    // Ignora le prenotazioni già presenti al caricamento (timestamp precedente all'avvio)
     const ts = b.requestedAt || 0;
-    if (Date.now() - startupTime < 5000) return; // primi 5 sec = caricamento iniziale
-    if (ts < startupTime) return; // prenotazione vecchia
+    if (Date.now() - startupTime < 5000) return;
+    if (ts < startupTime) return;
     avviaAllarme(b);
   });
 
