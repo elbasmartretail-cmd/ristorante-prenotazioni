@@ -516,24 +516,14 @@ document.write('<link rel="manifest" href="'+URL.createObjectURL(blob)+'">');
     document.addEventListener('click', riattiva, {once:true});
   }
 
-  // Audio — compatibile Safari iPhone e Android
-  let alarmAudio = null;
+  /// Audio — compatibile Safari iPhone e Android
+let audioCtx = null;  // ← AGGIUNTO
+let alarmAudio = null;
 
-  function creaAudio() {
-    // Suono di notifica via CDN pubblico Google
-    const urls = [
-      'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
-      'https://www.soundjay.com/buttons/sounds/beep-01a.mp3'
-    ];
-    alarmAudio = new Audio(urls[0]);
-    alarmAudio.volume = 1.0;
-    alarmAudio.preload = 'auto';
-    // Fallback al secondo URL se il primo non carica
-    alarmAudio.onerror = () => {
-      alarmAudio = new Audio(urls[1]);
-      alarmAudio.volume = 1.0;
-    };
-  }
+function creaAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // ... resto del codice
+}
 
   function suonaCampana() {
     try {
